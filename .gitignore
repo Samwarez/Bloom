@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+/dist/
+/installer-dist/
+/.build/
+*.deb
+*.tar.gz
+*.img
+*.qcow2
+.env
+.env.*
