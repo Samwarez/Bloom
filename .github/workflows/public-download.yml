@@ -1,0 +1,69 @@
+name: Verify public PetalOS download
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/public-download.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-download:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: List and download using Bloom without a GitHub token
+        env:
+          PETALOS_VERSION: rc1-layout2-20261026-145911-818721
+          EXPECTED_CATALOG_SHA256: 90087752102293254fd967a6fe7f84a6f7a680ae3f25e06c4d9081094720646a
+        run: |
+          unset GH_TOKEN GITHUB_TOKEN
+          python3 -B - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os, sys, time
+          sys.path.insert(0, 'local/installer')
+          from petal_installer import InstallerError, __version__
+          from petal_installer.releases import GitHub, verify_bundle
+          tag = os.environ['PETALOS_VERSION']
+          client = GitHub(token=None)
+          assert client.token is None
+          attempts = []
+          for attempt in range(7):
+              try:
+                  releases = client.releases()
+                  found = any(r['version'] == tag and r['installer_catalog'] for r in releases)
+                  attempts.append({'attempt': attempt + 1, 'visible': found, 'releases': releases})
+                  if found:
+                      break
+              except InstallerError as error:
+                  attempts.append({'attempt': attempt + 1, 'error': str(error)})
+              if attempt == 6:
+                  raise RuntimeError('Public listing did not expose the catalog: ' + json.dumps(attempts))
+              print('Waiting for public release visibility, attempt', attempt + 1, flush=True)
+              time.sleep(10)
+          destination = Path(os.environ['RUNNER_TEMP']) / 'bloom-public-petalos-download'
+          last = [None, 0.0]
+          def progress(event):
+              now = time.monotonic()
+              if last[0] != event['payload'] or now - last[1] >= 15:
+                  print('Downloading', event['payload'], event['bytes'], '/', event['total'], flush=True)
+                  last[:] = [event['payload'], now]
+          result = client.download(tag, 'base', destination, progress=progress)
+          catalog, variant = verify_bundle(destination)
+          digest = hashlib.sha256((destination / 'petalos-release.json').read_bytes()).hexdigest()
+          assert digest == os.environ['EXPECTED_CATALOG_SHA256']
+          assert catalog['version'] == tag and variant['id'] == 'base' and variant['layout'] == 2
+          report = {'passed': True, 'bloom_version': __version__, 'repository': client.repository,
+                    'version': tag, 'variant': 'base', 'authenticated': False,
+                    'default_listing': True, 'downloaded_payloads': len(variant['payloads']),
+                    'payload_bytes': sum(p['bytes'] for p in variant['payloads'].values()),
+                    'catalog_sha256': digest,
+                    'client_source_sha256': hashlib.sha256(Path('local/installer/petal_installer/releases.py').read_bytes()).hexdigest(),
+                    'listing_attempts': len(attempts)}
+          print('BLOOM_PUBLIC_DOWNLOAD_RESULT ' + json.dumps(report, sort_keys=True), flush=True)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('Bloom public PetalOS listing and full download passed.\n\n```json\n'
+                            + json.dumps(report, indent=2) + '\n```\n')
+          PY

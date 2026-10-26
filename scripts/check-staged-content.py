@@ -11,7 +11,7 @@ import tempfile
 
 
 MAX_FILE_BYTES = 5 * 1024 * 1024
-ROOT_FILES = {'.gitignore', '.gitattributes', '.gitleaks.toml', 'AGENTS.md', 'README.md', 'NOTICE.md', '.github/workflows/release.yml'}
+ROOT_FILES = {'.gitignore', '.gitattributes', '.gitleaks.toml', 'AGENTS.md', 'README.md', 'NOTICE.md', '.github/workflows/release.yml', '.github/workflows/public-download.yml'}
 SOURCE_DIRS = {'auto', 'config', 'local', 'tests', 'docs', 'scripts'}
 FORBIDDEN_DIRS = {
     '.git', '.build', '__pycache__', 'chroot', 'binary', 'cache', 'backups',
