@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 import time
 import unittest
+import tempfile
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
@@ -15,7 +17,7 @@ try:
     DISPLAY = Gtk.init_check()[0]
 except (ImportError, ValueError):DISPLAY = False
 from petal_installer import InstallerError
-from petal_installer.gui import create_window
+from petal_installer.gui import create_window, password_meter
 
 
 def descendants(widget):
@@ -49,6 +51,64 @@ def contrast(a, b):
 
 @unittest.skipUnless(DISPLAY, 'Native GTK checks need a graphical display')
 class GuiTests(unittest.TestCase):
+    def test_install_dialog_has_three_live_meters_and_fits_a_small_screen(self):
+        record = {'path': '/dev/gui-test', 'model': 'Synthetic GUI target', 'bytes': 32 * 1024**3, 'eligible': True}
+        def fake(args, progress, **kwargs):
+            if args.command == 'devices':return [record]
+            if args.command == 'verify':return {'version': 'gui-test', 'variant': 'base'}
+            if args.command == 'install':return {'mode': 'install', 'target': record, 'encryption': {'id': 'paranoid'}}
+            raise AssertionError('GUI fixture cannot perform a real operation')
+        window = create_window('example/PetalOS', dispatcher=fake, autoload=False)
+        self.windows.append(window)
+        def click(title):
+            next(w for w in descendants(window) if isinstance(w, Gtk.Button) and w.get_label() == title).clicked()
+        with tempfile.TemporaryDirectory() as directory, patch('petal_installer.gui.local_build_message', return_value=None):
+            chooser = next(w for w in descendants(window) if isinstance(w, Gtk.FileChooserButton))
+            chooser.set_filename(directory)
+            settle(lambda: bool(chooser.get_filename()))
+            click('Check and use this build')
+            settle(lambda: find(window, 'petal-pages').get_current_page() == 1)
+            click('Refresh drives')
+            settle(lambda: any(isinstance(w, Gtk.ComboBoxText) and w.get_active_id() == record['path'] for w in descendants(window)))
+            click('Review before starting')
+            start = next(w for w in descendants(window) if isinstance(w, Gtk.Button) and w.get_label() == 'Start reviewed operation…')
+            settle(start.get_sensitive)
+            failures = []
+            def inspect():
+                dialog = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.Dialog) and w.get_visible() and w.get_title() == 'Confirm install')
+                try:
+                    for role, minimum in [('system', 15), ('administrator', 15), ('private', 24)]:
+                        entry = find(dialog, 'bloom-password-' + role)
+                        self.assertFalse(entry.get_visibility())
+                        entry.set_text('a' * minimum)
+                        meter = find(dialog, 'bloom-strength-' + role)
+                        self.assertIn('Very weak', meter.get_text())
+                        self.assertIn('minimum met', meter.get_text())
+                    self.assertLessEqual(dialog.get_preferred_height_for_width(620)[0], 700)
+                except BaseException as error:failures.append(error)
+                finally:dialog.response(Gtk.ResponseType.CANCEL)
+                return False
+            GLib.idle_add(inspect);start.clicked()
+            if failures:raise failures[0]
+
+    def test_password_meter_updates_while_typing_and_clears(self):
+        from petal_installer.passwords import MINIMUM_CHARACTERS
+        for role, minimum in MINIMUM_CHARACTERS.items():
+            entry = Gtk.Entry(visibility=False)
+            meter = password_meter(Gtk, entry, role)
+            self.assertFalse(entry.get_visibility())
+            self.assertIn(str(minimum), meter.get_text())
+            entry.set_text('a' * minimum)
+            self.assertIn('Very weak', meter.get_text())
+            self.assertIn('minimum met', meter.get_text())
+            weak = meter.get_fraction()
+            entry.set_text('m8T!r4W#p9L$k2V%z7N@x6Q&')
+            self.assertGreater(meter.get_fraction(), weak)
+            entry.set_text('')
+            self.assertEqual(meter.get_fraction(), 0)
+            self.assertEqual(meter.get_text(), 'At least ' + str(minimum) + ' characters')
+            entry.destroy();meter.destroy()
+
     def setUp(self):self.windows = [];self.calls = []
 
     def tearDown(self):

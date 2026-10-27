@@ -20,6 +20,7 @@ from .plans import make_plan, existing_layout, WIPE_LIMITS
 from .releases import require, file_digest
 from .target import Target, atomic_copy, write_public, random_fill
 from .encryption import PROFILES, calibrate, verify_header
+from .passwords import MINIMUM_CHARACTERS, ROLE_NAMES
 
 CONFIGS = ('EFI/BOOT/grub.cfg', 'EFI/debian/grub.cfg', 'boot/grub/grub.cfg')
 
@@ -36,9 +37,9 @@ def credentials_checked(credentials, mode, *, encryption='balanced'):
         encoded[role] = value
     if mode == 'install':
         require(encryption in PROFILES, 'Unknown encryption tier.')
-        minimum = PROFILES[encryption]['minimum_characters']
-        require(all(len(v) >= minimum for v in credentials.values()),
-                'This tier requires at least ' + str(minimum) + ' characters for each new passphrase. Use unique, randomly chosen words or characters; length alone does not ensure strength.')
+        for role, minimum in MINIMUM_CHARACTERS.items():
+            require(len(credentials[role]) >= minimum,
+                    ROLE_NAMES[role] + ' requires at least ' + str(minimum) + ' characters. Use unique, randomly chosen words or characters; length alone does not ensure strength.')
         require(len(set(encoded.values())) == 3, 'SYSTEM, Private and PetalOS administrator passwords must be different.')
     return encoded
 

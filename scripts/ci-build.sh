@@ -4,7 +4,7 @@ set -eu
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
-  gcc libc6-dev libglib2.0-bin python3 python3-gi gir1.2-gtk-3.0 libgtk-3-bin librsvg2-common \
+  gcc libc6-dev libglib2.0-bin python3 python3-gi gir1.2-gtk-3.0 libgtk-3-bin librsvg2-common libzxcvbn0 \
   cryptsetup-bin dmsetup gdisk parted udev dosfstools e2fsprogs util-linux \
   psmisc openssl sbsigntool initramfs-tools-core squashfs-tools cpio gzip zstd \
   coreutils dash findutils grep sed tar ca-certificates fonts-dejavu-core \

@@ -1,4 +1,4 @@
-# Bloom 0.4.0
+# Bloom 0.4.1
 
 Bloom is a CLI-first Linux installer with a soft-pink GTK overlay. It installs new
 layout-2 media, updates OS contents, wipes selected drives and manages offline
@@ -12,8 +12,8 @@ the disk/encryption tools from checksum-verified installed trixie packages.
 It does not need FUSE or unprivileged user namespaces.
 
 ```sh
-tar -xzf bloom-0.4.0-linux-amd64.tar.gz
-./bloom-0.4.0-linux-amd64/bloom
+tar -xzf bloom-0.4.1-linux-amd64.tar.gz
+./bloom-0.4.1-linux-amd64/bloom
 ```
 
 The launcher opens the GUI by default; append `--help` for the CLI or
@@ -56,7 +56,7 @@ Build the Debian package without administrator rights:
 
 ```sh
 python3 -B local/installer/build-package.py
-sudo apt install ../installer-dist/bloom-installer_0.4.0_all.deb
+sudo apt install ../installer-dist/bloom-installer_0.4.1_all.deb
 bloom gui
 ```
 
@@ -86,11 +86,20 @@ All three tiers use **AES-256-XTS with two 256-bit keys** and LUKS2/Argon2id.
 They change the cost of unlocking and guessing passphrases, not ongoing cipher
 throughput. A CPU without AES acceleration may limit disk speed in every tier.
 
-| Tier | Intended use | Argon2id memory | Initial work target per volume | New passphrases |
-| --- | --- | --- | --- | --- |
-| Fast — Legacy Friendly | Older computers and shorter unlock waits | 32–64 MiB | About 1 second | At least 12 characters each |
-| Balanced — Recommended | Default for modern computers | 256–512 MiB | About 2 seconds | At least 12 characters each |
-| Paranoid — Maximum Protection | High-value data and expensive offline guessing | 1–2 GiB | About 5 seconds | At least 32 characters each |
+| Tier | Intended use | Argon2id memory | Initial work target per volume |
+| --- | --- | --- | --- |
+| Fast — Legacy Friendly | Older computers and shorter unlock waits | 32–64 MiB | About 1 second |
+| Balanced — Recommended | Default for modern computers | 256–512 MiB | About 2 seconds |
+| Paranoid — Maximum Protection | High-value data and expensive offline guessing | 1–2 GiB | About 5 seconds |
+
+For every tier, new SYSTEM and administrator passwords need at least **15
+characters** and Private needs at least **24 characters**. Spaces are allowed,
+and no special character mix is required. Each new-password field has a live
+local strength meter based on zxcvbn-c, bundled in the portable app. The meter
+checks common words and predictable patterns; it sends nothing over the network
+and saves no passwords or scores. Its estimate is advisory, with minimum length
+shown separately. It examines up to 128 ASCII characters; other text can be used
+but may show no strength estimate. There are no cracking-time guarantees.
 
 Use unique, randomly chosen words or characters. Length requirements do not
 measure entropy and cannot make predictable phrases strong. All three new
@@ -130,8 +139,8 @@ command. PetalOS remains the operating system and release/storage format.
 
 The GUI checks GitHub on launch and loads build choices when a version is
 selected. Variants may include a local AI agent; only actual published choices
-are offered. When a repository has no published releases, the GUI explains that state.
-See [PetalOS releases](https://github.com/Samwarez/PetalOS/releases) for availability.
+are offered. The repository currently has no published releases (checked
+2026-10-24), so the GUI explains that state rather than displaying blank lists.
 For private repositories, GitHub access accepts a masked read token for this
 app session only. The CLI still accepts GH_TOKEN from its environment.
 

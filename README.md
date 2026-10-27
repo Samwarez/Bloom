@@ -7,9 +7,9 @@ Bloom installs and manages [PetalOS](https://github.com/Samwarez/PetalOS) on por
 Get the Linux amd64 portable archive from [Bloom releases](https://github.com/Samwarez/Bloom/releases). Extract the whole folder and run the launcher as your normal desktop user:
 
 ```sh
-sha256sum -c bloom-0.4.0-linux-amd64.tar.gz.sha256
-tar -xzf bloom-0.4.0-linux-amd64.tar.gz
-./bloom-0.4.0-linux-amd64/bloom
+sha256sum -c bloom-0.4.1-linux-amd64.tar.gz.sha256
+tar -xzf bloom-0.4.1-linux-amd64.tar.gz
+./bloom-0.4.1-linux-amd64/bloom
 ```
 
 Keep the extracted folder together. No package installation or FUSE is required. The initial supported target is Debian 13 and compatible amd64 desktops with merged `/usr`. Your desktop must provide `pkexec` and an administrator authorization agent. Bloom asks for administrator authorization when a drive operation starts.
@@ -17,7 +17,7 @@ Keep the extracted folder together. No package installation or FUSE is required.
 The Debian package is an alternative:
 
 ```sh
-sudo apt install ./bloom-installer_0.4.0_all.deb
+sudo apt install ./bloom-installer_0.4.1_all.deb
 bloom
 ```
 
@@ -33,7 +33,7 @@ All tiers use LUKS2, AES-256-XTS with two 256-bit keys, and Argon2id. They chang
 | Balanced — Recommended | Modern computers; default | 256–512 MiB | About 2 seconds |
 | Paranoid — Maximum Protection | Expensive offline guessing | 1–2 GiB | About 5 seconds |
 
-Bloom calibrates CPU/RAM costs before erasing a drive and refuses unmet memory floors. OS and settings unlock sequentially from one SYSTEM prompt; Private uses a separate passphrase. Choose for the oldest computer you intend to boot. Use distinct, randomly generated passphrases. Paranoid requires at least 32 characters; the others require at least 12. Length alone does not measure entropy.
+Bloom calibrates CPU/RAM costs before erasing a drive and refuses unmet memory floors. OS and settings unlock sequentially from one SYSTEM prompt; Private uses a separate passphrase. Choose for the oldest computer you intend to boot. Use distinct, randomly generated passphrases. Every tier requires at least 15 characters for SYSTEM and administrator passwords, and 24 for Private. A live, local strength meter flags common words and predictable patterns while you type. Spaces are allowed; no special character mix is required. Length alone does not measure entropy, and the meter is an estimate, not a guarantee. Existing drives keep their current passwords.
 
 AES-256 has a strong margin against known quantum key-search attacks in every tier. No tier guarantees protection against every adversary or a compromised computer. This version supports passphrases only. Read the [encryption design](docs/bloom-encryption.md) and [complete app instructions](local/installer/README.md).
 
