@@ -269,7 +269,7 @@ def perform(request, credentials, progress=lambda event: None):
         return execute(request, credentials, progress)
     mode = request.get('mode')
     require(mode in ('store', 'recovery'), 'Unsupported administrator operation.')
-    require(request.keys() <= {'mode', 'device', 'plan_sha256', 'action', 'kind', 'source', 'name', 'replace'},
+    require(request.keys() <= {'mode', 'device', 'plan_sha256', 'action', 'kind', 'source', 'name', 'replace', 'path', 'new_name'},
             'Unexpected maintenance request.')
     encoded = credentials_checked(credentials, mode)
     plan = make_plan('system-store', linux.choose(request['device']))
@@ -277,6 +277,17 @@ def perform(request, credentials, progress=lambda event: None):
     if mode == 'recovery':
         from .recovery import verify_pair
         return verify_pair(request['device'], credentials['system'])
+    from . import store_browser
+    if request.get('action') in store_browser.ACTIONS:
+        store_browser.validate(request)
+        payload = store_browser.prepare_upload(request) if request['action'] == 'put' else None
+        try:
+            from .store import system_session
+            with system_session(request['device'], writable=request['action'] != 'browse', passphrase=credentials['system']) as selected:
+                return store_browser.browse(selected, request['path']) if request['action'] == 'browse' else store_browser.change(selected, request, payload)
+        except OSError:
+            raise InstallerError('Settings operation stopped. Refresh the folder to check its current state. Only empty folders can be removed.') from None
+        finally:encoded.clear()
     require(request.get('action') in ('list', 'import'), 'Unsupported settings action.')
     from .store import system_session, inventory, import_file, checked_payload
     if request['action'] == 'import':

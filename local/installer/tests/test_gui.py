@@ -7,6 +7,7 @@ import sys
 import time
 import unittest
 import tempfile
+import threading
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -51,6 +52,84 @@ def contrast(a, b):
 
 @unittest.skipUnless(DISPLAY, 'Native GTK checks need a graphical display')
 class GuiTests(unittest.TestCase):
+    def test_system_browser_navigates_and_manages_saved_files_without_private(self):
+        from petal_installer.store_gui import browse_store
+        from petal_installer import store_browser
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory);(state / 'Desktop').mkdir()
+            (state / 'Desktop/preferences.json').write_text('{}')
+            plan = {'target': {'model': 'Synthetic card', 'path': '/dev/gui-fixture'}, 'plan_sha256': 'fixture'}
+            calls = [];failures = [];stage = [0];deadline = time.monotonic() + 15
+            def execute(request, credentials, completed, failed):
+                self.assertEqual(set(credentials), {'system'});credentials.clear();calls.append(request)
+                def finish():
+                    try:
+                        value = store_browser.browse(state, request['path']) if request['action'] == 'browse' else store_browser.change(state, request)
+                        completed(value)
+                    except BaseException as error:failed(str(error))
+                    return False
+                GLib.idle_add(finish);return threading.Event()
+            def button(dialog, title):return next(w for w in descendants(dialog) if isinstance(w, Gtk.Button) and w.get_label() == title)
+            def activate(tree, destination):
+                index = next(i for i, row in enumerate(tree.get_model()) if row[3] == destination)
+                tree.row_activated(Gtk.TreePath.new_from_indices([index]), tree.get_column(0))
+            def inspect():
+                dialog = next((w for w in Gtk.Window.list_toplevels() if w.get_name() == 'bloom-store-browser' and w.get_visible()), None)
+                if dialog is None:return True
+                try:
+                    if time.monotonic() > deadline:raise AssertionError('SYSTEM browser did not complete its test flow')
+                    tree = find(dialog, 'bloom-store-files');model = tree.get_model()
+                    if not tree.get_sensitive():return True
+                    path = find(dialog, 'bloom-store-path').get_text()
+                    if stage[0] == 0 and 'saved-settings folders' in path:
+                        self.assertFalse(button(dialog, 'Add file…').get_sensitive())
+                        self.assertTrue(all('Private' not in row[0] for row in model))
+                        stage[0] = 1;activate(tree, 'Files')
+                    elif stage[0] == 1 and path == 'SYSTEM / Files':
+                        self.assertTrue(button(dialog, 'Add file…').get_sensitive())
+                        def name_folder():
+                            question = next(w for w in Gtk.Window.list_toplevels() if isinstance(w, Gtk.Dialog) and w.get_title() == 'New folder')
+                            next(w for w in descendants(question) if isinstance(w, Gtk.Entry)).set_text('Notes')
+                            question.response(Gtk.ResponseType.OK);return False
+                        stage[0] = 2;GLib.idle_add(name_folder);button(dialog, 'New folder…').clicked()
+                    elif stage[0] == 2 and any(row[0] == 'Notes' for row in model):
+                        self.assertTrue((state / 'Files/Notes').is_dir())
+                        self.assertLessEqual(dialog.get_preferred_height_for_width(760)[0], 700)
+                        stage[0] = 3;button(dialog, 'Up').clicked()
+                    elif stage[0] == 3 and 'saved-settings folders' in path:
+                        stage[0] = 4;activate(tree, 'Desktop')
+                    elif stage[0] == 4 and path == 'SYSTEM / Desktop':
+                        self.assertFalse(button(dialog, 'Add file…').get_sensitive())
+                        tree.get_selection().select_path(Gtk.TreePath.new_from_indices([0]))
+                        self.assertFalse(button(dialog, 'Delete…').get_sensitive())
+                        stage[0] = 5;dialog.response(Gtk.ResponseType.CLOSE);return False
+                except BaseException as error:
+                    failures.append(error);dialog.response(Gtk.ResponseType.CLOSE);return False
+                return True
+            GLib.timeout_add(30, inspect)
+            browse_store(Gtk, GLib, None, plan, 'synthetic-only', execute)
+            if failures:raise failures[0]
+            self.assertEqual(stage[0], 5)
+            self.assertTrue(all(call['mode'] == 'store' for call in calls))
+
+    def test_system_browser_failure_stays_visible_and_can_be_closed(self):
+        from petal_installer.store_gui import browse_store
+        plan = {'target': {'model': 'Synthetic card', 'path': '/dev/gui-fixture'}, 'plan_sha256': 'fixture'}
+        def execute(request, credentials, completed, failed):
+            credentials.clear();GLib.idle_add(lambda: (failed('Synthetic safe failure.'), False)[1]);return threading.Event()
+        failures = [];deadline = time.monotonic() + 10
+        def inspect():
+            dialog = next((w for w in Gtk.Window.list_toplevels() if w.get_name() == 'bloom-store-browser' and w.get_visible()), None)
+            if dialog is None:return True
+            try:
+                if time.monotonic() > deadline:raise AssertionError('Browser error did not become visible')
+                if find(dialog, 'bloom-store-status').get_text() != 'Synthetic safe failure.':return True
+                self.assertTrue(next(w for w in descendants(dialog) if isinstance(w, Gtk.Button) and w.get_label() == 'Close and lock').get_sensitive())
+            except BaseException as error:failures.append(error)
+            dialog.response(Gtk.ResponseType.CLOSE);return False
+        GLib.timeout_add(30, inspect);browse_store(Gtk, GLib, None, plan, 'synthetic-only', execute)
+        if failures:raise failures[0]
+
     def test_install_dialog_has_three_live_meters_and_fits_a_small_screen(self):
         record = {'path': '/dev/gui-test', 'model': 'Synthetic GUI target', 'bytes': 32 * 1024**3, 'eligible': True}
         def fake(args, progress, **kwargs):

@@ -1,4 +1,4 @@
-# Bloom 0.4.1
+# Bloom 0.4.2
 
 Bloom is a CLI-first Linux installer with a soft-pink GTK overlay. It installs new
 layout-2 media, updates OS contents, wipes selected drives and manages offline
@@ -12,8 +12,8 @@ the disk/encryption tools from checksum-verified installed trixie packages.
 It does not need FUSE or unprivileged user namespaces.
 
 ```sh
-tar -xzf bloom-0.4.1-linux-amd64.tar.gz
-./bloom-0.4.1-linux-amd64/bloom
+tar -xzf bloom-0.4.2-linux-amd64.tar.gz
+./bloom-0.4.2-linux-amd64/bloom
 ```
 
 The launcher opens the GUI by default; append `--help` for the CLI or
@@ -56,7 +56,7 @@ Build the Debian package without administrator rights:
 
 ```sh
 python3 -B local/installer/build-package.py
-sudo apt install ../installer-dist/bloom-installer_0.4.1_all.deb
+sudo apt install ../installer-dist/bloom-installer_0.4.2_all.deb
 bloom gui
 ```
 
@@ -230,6 +230,21 @@ flash spare/remapped pages.
 
 The GUI's SYSTEM settings tab lists saved assets, imports or explicitly replaces
 one named asset, and verifies the shared SYSTEM passphrase against OS/settings.
+Use **Browse SYSTEM folders…** to open the saved-settings browser. It asks for
+SYSTEM once and retains that credential only in the browser session; **Close
+and lock** clears it. Each worker operation closes its temporary mount and
+encryption mapping before completing. Private remains closed throughout.
+
+The browser lists folders and filenames without displaying file contents. Add
+or explicitly replace VPN profiles, wallpapers and pending theme/override JSON
+files; these retain their existing validation. **Other saved files** supports
+general files up to 32 MiB, nested folders, file renaming and deletion, and empty
+folder removal. These extra files are stored in `Files` inside SYSTEM settings
+and are not activated as OS settings. Desktop and application settings can be
+browsed but are managed by PetalOS. The active VPN profile cannot be renamed or
+deleted. File links and special files are blocked, and existing destinations
+are preserved unless replacement is explicitly selected.
+
 Only the settings operation opens SYSTEM; Private remains closed. CLI equivalents:
 
 ```sh
@@ -240,6 +255,11 @@ sudo bloom recovery --device /dev/SELECTED
 ```
 
 `--replace` explicitly permits atomic replacement of that exact stored name.
+Import source folders may be symbolic links, including Downloads folders on
+another filesystem. Bloom resolves the source folder and pins its directories
+before opening the selected regular file. A symbolic link used as the selected
+file itself is refused; choose its original file. Settings destinations and OS
+release inputs retain their separate strict no-symlink protections.
 Imports validate WireGuard profiles and PNG dimensions; they never connect VPNs
 automatically. The full SYSTEM view stays read-only and imports write only the
 selected settings view. Theme palettes and bounded desktop overrides are staged

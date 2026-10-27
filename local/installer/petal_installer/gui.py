@@ -378,6 +378,15 @@ def create_window(repository, *, dispatcher=dispatch, autoload=True):
             if action == 'import':body.add(label('Import ' + settings_name.get_text() + (' · replacing that name if present.' if replace_existing.get_active() else ' · existing files are preserved.')))
             body.show_all();response = dialog.run();secret = password.get_text();password.set_text('');dialog.destroy()
             if response != Gtk.ResponseType.OK:return
+            if action == 'browse':
+                from .store_gui import browse_store
+                def execute_store(request, credentials, completed, failed):
+                    job['cancel'] = threading.Event()
+                    invoke(privileged_job=(request, credentials), completed=completed, failed=failed)
+                    return job['cancel']
+                browse_store(Gtk, GLib, window, value, secret, execute_store)
+                secret = None
+                return
             request = {'mode': 'recovery' if action == 'recovery' else 'store', 'device': disk, 'plan_sha256': value['plan_sha256']}
             if action != 'recovery':request['action'] = action
             if action == 'import':request.update(kind=settings_kind.get_active_id(), source=settings_source.get_filename(), name=settings_name.get_text(), replace=replace_existing.get_active())
@@ -385,6 +394,7 @@ def create_window(repository, *, dispatcher=dispatch, autoload=True):
         invoke(['system-store', '--device', disk], ready)
     button(settings, 'Import selected file…', lambda _: settings_action('import'), True)
     maintenance = Gtk.Box(spacing=8);settings.add(maintenance)
+    button(maintenance, 'Browse SYSTEM folders…', lambda _: settings_action('browse'))
     button(maintenance, 'List saved settings', lambda _: settings_action('list'))
     button(maintenance, 'Check SYSTEM passphrase', lambda _: settings_action('recovery'))
     settings.add(label('Themes and overrides stay inactive until their OS loader is implemented.', 'subtitle'))
