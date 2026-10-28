@@ -130,6 +130,24 @@ class EditorTests(unittest.TestCase):
         with self.assertRaises(InstallerError):editor.workspace_fd(self.workspace,os.getuid())
         with self.assertRaises(InstallerError):editor.workspace_fd('/run/user/1000/bloom-settings-test',0)
 
+    def test_interrupted_save_closes_session_instead_of_offering_retry(self):
+        record = disk();plan = make_plan('system-store', record);closed = [];events = []
+        workspace = self.root / 'interrupted';workspace.mkdir(mode=0o700)
+        credentials = {'system':'fixture-passphrase'}
+        @contextlib.contextmanager
+        def session(*args, **kwargs):
+            try:yield self.state
+            finally:closed.append(True)
+        request = dict(mode='store-editor',device=record['path'],plan_sha256=plan['plan_sha256'],workspace=str(workspace))
+        with patch.object(linux,'choose',return_value=record),patch.object(linux,'raw_disk',return_value={}), \
+             patch.object(linux,'describe',return_value=record),patch.object(store,'system_session',session), \
+             patch.object(editor,'workspace_fd',side_effect=lambda *_:os.open(workspace,os.O_RDONLY|os.O_DIRECTORY)), \
+             patch.object(editor.EditingCopy,'save',side_effect=InterruptedError('Editing session stopped.')):
+            with self.assertRaises(InterruptedError):
+                editor.serve(request,credentials,os.getuid(),-1,lambda kind,value:events.append(kind),lambda *_:b'{"action":"save"}\n')
+        self.assertEqual(closed,[True]);self.assertEqual(credentials,{})
+        self.assertNotIn('editor-error',events)
+
 
 class FileManagerTests(unittest.TestCase):
     def test_single_worker_handles_save_retry_and_cleans_ram_workspace(self):

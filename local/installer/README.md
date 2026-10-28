@@ -1,4 +1,4 @@
-# Bloom 0.4.3
+# Bloom 0.4.4
 
 Bloom is a CLI-first Linux installer with a soft-pink GTK overlay. It installs new
 layout-2 media, updates OS contents, wipes selected drives and manages offline
@@ -12,8 +12,8 @@ the disk/encryption tools from checksum-verified installed trixie packages.
 It does not need FUSE or unprivileged user namespaces.
 
 ```sh
-tar -xzf bloom-0.4.3-linux-amd64.tar.gz
-./bloom-0.4.3-linux-amd64/bloom
+tar -xzf bloom-0.4.4-linux-amd64.tar.gz
+./bloom-0.4.4-linux-amd64/bloom
 ```
 
 The launcher opens the GUI by default; append `--help` for the CLI or
@@ -56,7 +56,7 @@ Build the Debian package without administrator rights:
 
 ```sh
 python3 -B local/installer/build-package.py
-sudo apt install ../installer-dist/bloom-installer_0.4.3_all.deb
+sudo apt install ../installer-dist/bloom-installer_0.4.4_all.deb
 bloom gui
 ```
 

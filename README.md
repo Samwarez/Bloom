@@ -7,9 +7,9 @@ Bloom installs and manages [PetalOS](https://github.com/Samwarez/PetalOS) on por
 Get the Linux amd64 portable archive from [Bloom releases](https://github.com/Samwarez/Bloom/releases). Extract the whole folder and run the launcher as your normal desktop user:
 
 ```sh
-sha256sum -c bloom-0.4.3-linux-amd64.tar.gz.sha256
-tar -xzf bloom-0.4.3-linux-amd64.tar.gz
-./bloom-0.4.3-linux-amd64/bloom
+sha256sum -c bloom-0.4.4-linux-amd64.tar.gz.sha256
+tar -xzf bloom-0.4.4-linux-amd64.tar.gz
+./bloom-0.4.4-linux-amd64/bloom
 ```
 
 Keep the extracted folder together. No package installation or FUSE is required. The initial supported target is Debian 13 and compatible amd64 desktops with merged `/usr`. Your desktop must provide `pkexec` and an administrator authorization agent. Bloom asks for administrator authorization when a drive operation starts.
@@ -17,7 +17,7 @@ Keep the extracted folder together. No package installation or FUSE is required.
 The Debian package is an alternative:
 
 ```sh
-sudo apt install ./bloom-installer_0.4.3_all.deb
+sudo apt install ./bloom-installer_0.4.4_all.deb
 bloom
 ```
 

@@ -216,6 +216,7 @@ def serve(request, credentials, uid, incoming, emit, read_packet):
                             'The selected card changed or was disconnected. Do not save this session to another card.')
                     result = editing.save();break
                 except InstallerError as error:emit('editor-error', {'message': str(error)})
+                except InterruptedError:raise
                 except OSError:emit('editor-error', {'message': 'Saving stopped. Some files may have been saved; inspect the card before retrying.'})
         return result
     finally:credentials.clear();encoded.clear();os.close(fd)

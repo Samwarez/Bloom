@@ -47,6 +47,11 @@ def monitor_client(fd, finished, cancel):
         return
 
 
+def editor_signals():
+    def interrupted(*_):raise InterruptedError('Editing session stopped.')
+    for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):signal.signal(signum, interrupted)
+
+
 def main():
     if os.geteuid() != 0 or sys.argv[1:]:raise InstallerError('Invalid administrator worker invocation.')
     for path in (Path(__file__), *Path(__file__).resolve().parents):
@@ -65,6 +70,7 @@ def main():
     request, credentials = validate_packet(json.loads(raw))
     raw = None
     if request.get('mode') == 'store-editor':
+        editor_signals()
         from petal_installer.store_editor import serve
         key = 'BLOOM_CALLER_UID' if supervisor is not None else 'PKEXEC_UID'
         uid = os.environ.get(key, '')
