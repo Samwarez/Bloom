@@ -1,4 +1,4 @@
-# Bloom 0.4.2
+# Bloom 0.4.3
 
 Bloom is a CLI-first Linux installer with a soft-pink GTK overlay. It installs new
 layout-2 media, updates OS contents, wipes selected drives and manages offline
@@ -12,8 +12,8 @@ the disk/encryption tools from checksum-verified installed trixie packages.
 It does not need FUSE or unprivileged user namespaces.
 
 ```sh
-tar -xzf bloom-0.4.2-linux-amd64.tar.gz
-./bloom-0.4.2-linux-amd64/bloom
+tar -xzf bloom-0.4.3-linux-amd64.tar.gz
+./bloom-0.4.3-linux-amd64/bloom
 ```
 
 The launcher opens the GUI by default; append `--help` for the CLI or
@@ -56,7 +56,7 @@ Build the Debian package without administrator rights:
 
 ```sh
 python3 -B local/installer/build-package.py
-sudo apt install ../installer-dist/bloom-installer_0.4.2_all.deb
+sudo apt install ../installer-dist/bloom-installer_0.4.3_all.deb
 bloom gui
 ```
 
@@ -230,20 +230,31 @@ flash spare/remapped pages.
 
 The GUI's SYSTEM settings tab lists saved assets, imports or explicitly replaces
 one named asset, and verifies the shared SYSTEM passphrase against OS/settings.
-Use **Browse SYSTEM folders…** to open the saved-settings browser. It asks for
-SYSTEM once and retains that credential only in the browser session; **Close
-and lock** clears it. Each worker operation closes its temporary mount and
-encryption mapping before completing. Private remains closed throughout.
+Use **Browse SYSTEM folders…** to open a normal desktop file-manager window.
+Bloom requests host administrator authorization and SYSTEM's passphrase once,
+keeps one scoped worker/mapping open, and creates a private RAM working copy
+under `/run/user/UID`. Navigation and drag-and-drop use ordinary local file
+operations, without restaging the portable runtime or repeating Argon2id.
 
-The browser lists folders and filenames without displaying file contents. Add
-or explicitly replace VPN profiles, wallpapers and pending theme/override JSON
-files; these retain their existing validation. **Other saved files** supports
-general files up to 32 MiB, nested folders, file renaming and deletion, and empty
-folder removal. These extra files are stored in `Files` inside SYSTEM settings
-and are not activated as OS settings. Desktop and application settings can be
-browsed but are managed by PetalOS. The active VPN profile cannot be renamed or
-deleted. File links and special files are blocked, and existing destinations
-are preserved unless replacement is explicitly selected.
+Drag files into `Files` for general saved files, `Network/Profiles` for WireGuard
+profiles, `Wallpapers` for PNGs, or the pending theme/override JSON folders.
+Return to Bloom and choose **Save changes and lock** to validate changes and
+apply them to the card; **Discard and lock** leaves unsaved edits off the card.
+Simply closing the file-manager window does not end the Bloom editing session.
+
+The file manager runs as the desktop user, never root. Private, administrator
+credentials, and managed desktop/application files are excluded from the working
+copy. VPN/schema validation, active-profile deletion protection, no-link and
+regular-file checks remain enforced on save. General files do not become active
+OS settings. The copy is bounded to 128 MiB, 1000 entries, 12 directory levels
+and 32 MiB per file. Native desktop metadata files are ignored.
+
+Bloom validates all changed files before starting card writes. Each file is
+published atomically; a hardware/I/O failure can still interrupt a multi-file
+save. Unexpected changes to card files outside the session stop the save.
+Normal close, discard, client exit and EOF close the worker's mappings; the
+client removes its RAM copy after worker cleanup. The host file manager retains
+its usual preview, cache and Trash behavior; Bloom does not reconfigure it.
 
 Only the settings operation opens SYSTEM; Private remains closed. CLI equivalents:
 

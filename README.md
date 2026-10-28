@@ -7,9 +7,9 @@ Bloom installs and manages [PetalOS](https://github.com/Samwarez/PetalOS) on por
 Get the Linux amd64 portable archive from [Bloom releases](https://github.com/Samwarez/Bloom/releases). Extract the whole folder and run the launcher as your normal desktop user:
 
 ```sh
-sha256sum -c bloom-0.4.2-linux-amd64.tar.gz.sha256
-tar -xzf bloom-0.4.2-linux-amd64.tar.gz
-./bloom-0.4.2-linux-amd64/bloom
+sha256sum -c bloom-0.4.3-linux-amd64.tar.gz.sha256
+tar -xzf bloom-0.4.3-linux-amd64.tar.gz
+./bloom-0.4.3-linux-amd64/bloom
 ```
 
 Keep the extracted folder together. No package installation or FUSE is required. The initial supported target is Debian 13 and compatible amd64 desktops with merged `/usr`. Your desktop must provide `pkexec` and an administrator authorization agent. Bloom asks for administrator authorization when a drive operation starts.
@@ -17,13 +17,13 @@ Keep the extracted folder together. No package installation or FUSE is required.
 The Debian package is an alternative:
 
 ```sh
-sudo apt install ./bloom-installer_0.4.2_all.deb
+sudo apt install ./bloom-installer_0.4.3_all.deb
 bloom
 ```
 
 VPN and other settings imports support source folders linked to another filesystem, such as a linked Downloads folder. Select the original regular file when the file itself is a shortcut.
 
-On the SYSTEM settings page, **Browse SYSTEM folders…** opens a folder browser for adding, replacing, renaming and deleting saved files, and creating folders under **Other saved files**. VPN profiles and wallpapers retain their validation. Managed desktop/application settings are browse only; extra files do not become active system settings. Private stays locked. Close the browser to clear its session credential.
+On the SYSTEM settings page, **Browse SYSTEM folders…** opens your normal file manager with a private RAM working copy. Authorize and unlock once, then browse and drag files without repeated prompts or runtime transfers. Use `Files` for general files, `Network/Profiles` for VPN profiles, and `Wallpapers` for PNGs. Return to Bloom to **Save changes and lock** or **Discard and lock**. All changed settings are validated before writes. Private and administrator credentials stay excluded. The working copy is limited to 128 MiB; see the app instructions for scope and cleanup details.
 
 Bloom and PetalOS have separate releases. In Bloom, choose a published PetalOS version and build, download it, then review the selected drive and operation. The default OS repository is `Samwarez/PetalOS`. Only published builds appear; a private repository requires session-only GitHub access. See [PetalOS releases](https://github.com/Samwarez/PetalOS/releases).
 

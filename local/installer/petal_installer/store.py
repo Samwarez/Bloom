@@ -90,6 +90,13 @@ def checked_payload(kind, source):
     require(kind in KINDS, 'Unsupported settings import kind.')
     limit = 32 * 1024**2 if kind == 'wallpaper' else 16384
     data = read_import(source, limit)
+    return checked_data(kind, data)
+
+
+def checked_data(kind, data):
+    """Validate already pinned bytes, including native-editor snapshots."""
+    require(kind in KINDS and isinstance(data, bytes), 'Invalid settings payload.')
+    require(len(data) <= (32 * 1024**2 if kind == 'wallpaper' else 16384), 'Selected settings file exceeds its size limit.')
     if kind == 'vpn':
         candidate = ROOT / 'config/includes.chroot/usr/local/lib/portable/vpn_profiles.py'
         if not candidate.exists():candidate = Path(__file__).with_name('shared') / 'vpn_profiles.py'

@@ -379,13 +379,16 @@ def create_window(repository, *, dispatcher=dispatch, autoload=True):
             body.show_all();response = dialog.run();secret = password.get_text();password.set_text('');dialog.destroy()
             if response != Gtk.ResponseType.OK:return
             if action == 'browse':
-                from .store_gui import browse_store
-                def execute_store(request, credentials, completed, failed):
-                    job['cancel'] = threading.Event()
-                    invoke(privileged_job=(request, credentials), completed=completed, failed=failed)
-                    return job['cancel']
-                browse_store(Gtk, GLib, window, value, secret, execute_store)
+                from .native_store_gui import edit_store
+                credentials = {'system': secret}
                 secret = None
+                job['busy'] = True;spinner.start();sync()
+                try:
+                    saved = edit_store(Gtk, GLib, window, value, credentials,
+                                       session_created=lambda session: job.update(cancel=session.cancel))
+                    status.set_text('SYSTEM changes saved and locked.' if saved else 'SYSTEM locked; unsaved changes discarded.')
+                except InstallerError as error:error_dialog(str(error))
+                finally:job['busy'] = False;job['cancel'] = None;spinner.stop();sync()
                 return
             request = {'mode': 'recovery' if action == 'recovery' else 'store', 'device': disk, 'plan_sha256': value['plan_sha256']}
             if action != 'recovery':request['action'] = action

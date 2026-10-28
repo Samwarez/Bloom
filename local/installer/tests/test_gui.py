@@ -52,6 +52,57 @@ def contrast(a, b):
 
 @unittest.skipUnless(DISPLAY, 'Native GTK checks need a graphical display')
 class GuiTests(unittest.TestCase):
+    def test_native_editor_opens_file_manager_once_and_retries_save_without_reauthorization(self):
+        from petal_installer.native_store_gui import edit_store
+        attempts = [];instances = [];opened = [];failures = [];stage = [0];deadline = time.monotonic() + 10
+        class Session:
+            def __init__(self,request,credentials,event):
+                self.workspace=Path('/tmp/synthetic-editor-folder');self.cancel=threading.Event();self.event=event
+                self.credentials=credentials;instances.append(self)
+            def start(self):
+                self.credentials.clear();self.event({'type':'editor-ready','value':{'workspace':str(self.workspace)}})
+            def send(self,action):
+                attempts.append(action)
+                if len(attempts)==1:self.event({'type':'editor-error','value':{'message':'Synthetic validation failure.'}})
+                else:self.event({'type':'editor-closed','value':{'saved':True}})
+        def inspect():
+            dialog=next((w for w in Gtk.Window.list_toplevels() if w.get_name()=='bloom-native-store' and w.get_visible()),None)
+            if dialog is None:return True
+            try:
+                if time.monotonic()>deadline:raise AssertionError('Native editor test did not finish')
+                save=next(w for w in descendants(dialog) if isinstance(w,Gtk.Button) and w.get_label()=='Save changes and lock')
+                if not save.get_sensitive():return True
+                if stage[0]==0:
+                    self.assertIn('synthetic-editor-folder',find(dialog,'bloom-editor-path').get_text())
+                    self.assertLessEqual(dialog.get_preferred_height_for_width(620)[0],700)
+                    stage[0]=1;dialog.response(2)
+                elif stage[0]==1 and find(dialog,'bloom-editor-status').get_text()=='Synthetic validation failure.':
+                    next(w for w in descendants(dialog) if isinstance(w,Gtk.Button) and w.get_label()=='Open folder').clicked()
+                    stage[0]=2;dialog.response(2);return False
+            except BaseException as error:failures.append(error);dialog.response(1);return False
+            return True
+        GLib.timeout_add(30,inspect)
+        credentials={'system':'synthetic-only'}
+        saved=edit_store(Gtk,GLib,None,{'target':{'path':'/dev/fixture'},'plan_sha256':'fixture'},credentials,
+                         session_factory=Session,opener=opened.append)
+        if failures:raise failures[0]
+        self.assertTrue(saved);self.assertEqual(credentials,{})
+        self.assertEqual(len(instances),1);self.assertEqual(attempts,['save','save']);self.assertEqual(len(opened),2)
+
+    def test_native_editor_reports_fatal_error_after_session_cleanup(self):
+        from petal_installer.native_store_gui import edit_store
+        class Session:
+            workspace=Path('/tmp/synthetic-editor');cancel=threading.Event()
+            def __init__(self,request,credentials,event):self.event=event
+            def start(self):
+                self.event({'type':'error','message':'Synthetic authorization failure.'})
+                self.event({'type':'editor-closed','value':None})
+        credentials={'system':'synthetic-only'}
+        with self.assertRaisesRegex(InstallerError,'Synthetic authorization failure'):
+            edit_store(Gtk,GLib,None,{'target':{'path':'/dev/fixture'},'plan_sha256':'fixture'},credentials,
+                       session_factory=Session,opener=lambda *_:None)
+        self.assertEqual(credentials,{})
+
     def test_system_browser_navigates_and_manages_saved_files_without_private(self):
         from petal_installer.store_gui import browse_store
         from petal_installer import store_browser
